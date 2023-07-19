@@ -224,12 +224,17 @@ window.addEventListener('keyup',keyupHandler)
       <p>API似乎掛了‼</p>
       <p>😥請稍後再試😥</p>
     </div>
+
     <div v-else class="loading">
-      <div class="message">配對中...</div>
-      <div class="rectangles">
-        <div class="rectangle"></div><div class="rectangle"></div><div class="rectangle"></div>
-      </div>
+        <div class="circles">
+            <div class="circle"></div>
+            <div class="circle"></div>
+            <div class="circle"></div>
+            <div class="range"></div>
+        </div>
+        <div class="message">配對中...</div>
     </div>
+
     <favorPetTemp :favor-pet="favorPet" 
                   :favor-pet-wrap-hide="favorPetWrapHide"
                   :image-mode="imageMode" 
@@ -514,48 +519,62 @@ window.addEventListener('keyup',keyupHandler)
   flex-direction: column;
 }
 .loading{
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: auto;
   @include flex_center;
-  flex-direction: column-reverse;
-  transition: all 1s;
-  .message{
-    font-size: 22px;
-    color: #ffffff;
-  }
-  .rectangles{
-    display: inline-block;
+  flex-direction: column;
+  .circles{
+    width: 20vmin;
+    height: 20vmin;
+    background: rgba(244,253,143,0.5);
+    border-radius: 50%;
     position: relative;
-    width: 80px;
-    height: 80px;
-    .rectangle{
-      display: inline-block;
+    .range{
       position: absolute;
-      left: 8px;
-      width: 16px;
-      background: #ffffff;
-      animation: loadingAnimation .5s cubic-bezier(0, 0.5, 0.5, 1) infinite;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: auto;
+      border-radius: 50%;
+      border-left: 10vmin solid rgba(215, 124, 144, 0.2);
+      border-top: 10vmin solid transparent;
+      border-bottom: 10vmin solid transparent;
+      border-right: 10vmin solid transparent;
+      z-index: 5;
+      animation: loadingAnimation 2s infinite linear;
+    }
+    .circle{
+      background: rgba(240, 224, 107, 0.5);
+      border-radius: 50%;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: auto;
+      border: .5px white solid;
       &:nth-child(1){
-        left: 8px;
-        animation-delay: -0.24s;
+        width: 25%;
+        height: 25%;
       }
       &:nth-child(2){
-        left: 32px;
-        animation-delay: -0.12s;
+        width: 50%;
+        height: 50%;
       }
       &:nth-child(3){
-        left: 56px;
-        animation-delay: 0;
+        width: 75%;
+        height: 75%;
       }
     }
-    @keyframes loadingAnimation{
-      0% { top: 8px;  height: 64px; }
-      50%, 100% { top: 24px; height: 32px; }
-    }
+  }
+  .message{
+    margin-top: 10px;
+    font-size: 30px;
+    font-weight: 800;
+    color: rgb(215, 124, 144);
+  }
+  @keyframes loadingAnimation{
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 }
 .slide-enter-active{
