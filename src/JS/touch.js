@@ -13,7 +13,7 @@ const touchstartHandler=(event)=>{
 const touchendHandler=(callback, event)=>{
     endX = event.changedTouches[0].clientX
     endY = event.changedTouches[0].clientY
-    if (Math.abs(Math.abs(startX-endX)-Math.abs(startY-endY)) < 100){
+    if (Math.abs(Math.abs(startX-endX)-Math.abs(startY-endY)) < 50){
         console.log('滑動距離過短(無效)')
         return
     }

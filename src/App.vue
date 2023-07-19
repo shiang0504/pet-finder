@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watchEffect, watch, onMounted } from 'vue'
+import { ref, watchEffect, watch, onMounted } from 'vue'
 import axios from "axios"
 import { touchstartHandler, touchendHandler, touchmoveHandler } from './JS/touch'
 import { shuffle } from './JS/shuffle'
@@ -13,26 +13,18 @@ import favorPetTemp from './components/favorPet.vue'
 //   // itemRefs.value[0].style.background='red'
 // })
 
-
-
 // 最愛資料
 const favorPet = ref(JSON.parse(localStorage.getItem('pet_favorPet')) || [])
 // bind class
-// const loading = ref(null)
 const loadingCompleted = ref(true)
 const apiErr= ref(false)
 const heartAni = ref(false)
-
 // css style bind
 const imageMode = ref('cover')
 
 // const isSliding = ref(false)
 // const isSliding = ref(true)
-
-
 // const move = ref('12')
-// const moveX = ref(0)
-// const moveY = ref(0)
 
 // 最愛資料組件開關
 const favorPetWrapHide = ref(true)
@@ -40,7 +32,6 @@ const favorPetWrapHide = ref(true)
 const dogStatus = ref(true)
 const catStatus = ref(true)
 const kind = ref('')
-
 // 點貓狗切換的開關
 const dogPress = () =>{
   if(catStatus.value) dogStatus.value=!dogStatus.value
@@ -62,7 +53,6 @@ watch([dogStatus, catStatus], ()=>{
   if(dogStatus.value && !catStatus.value) kind.value='狗'
   if(!dogStatus.value && catStatus.value) kind.value='貓'
 })
-
 const apiData = ref([]) //api取得的資料
 const fiveData = ref([]) //篩選出五筆在畫面上
 const sliceStart = ref(0) //篩選起點
@@ -81,10 +71,12 @@ const callApi=()=>{
     return res
   })
   .then(res=>apiData.value.push(...res.data))
-  .then(()=>apiData.value = apiData.value.filter(i=>i.album_file !== ""))  //刪除沒照片的
+  .then(()=>apiData.value = apiData.value.filter(i=>i.album_file.includes('.png')))  //.jpg的相片因憑證問題手機端無法載入
+  // .then(()=>apiData.value = apiData.value.filter(i=>i.album_file !== ""))  //刪除沒照片的
   .then(()=>console.log('刪除空白後，拿到'+apiData.value.length+'筆'))
   .then(()=>shuffle(apiData.value))
   .then(()=>console.log('亂數完成'))
+  .then(()=>addDefaultBackground())
   .then(()=>fiveData.value = apiData.value.slice(sliceStart.value, sliceEnd.value))
   .then(()=>console.log('首次取得五筆'))
   .then(()=>loadingCompleted.value = true)
@@ -93,26 +85,8 @@ const callApi=()=>{
 callApi()
 watch(kind, callApi)
 
-// watchEffect(()=>{
-//   console.log('callApi/loading...')
-//   loadingCompleted.value = false;
-//   const apiUrl = `https://data.coa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL&animal_kind=${kind.value}`
-//   apiData.value = []
-//   axios.get(apiUrl)
-//   .then(res=>apiData.value.push(...res.data))
-//   .then(()=>apiData.value = apiData.value.filter(i=>i.album_file !== ""))  //刪除沒照片的
-//   .then(()=>console.log('刪除空白後，拿到'+apiData.value.length+'筆'))
-//   .then(()=>shuffle(apiData.value))
-//   .then(()=>console.log('亂數完成'))
-//   .then(()=>fiveData.value = apiData.value.slice(sliceStart.value, sliceEnd.value))
-//   .then(()=>console.log('首次取得五筆'))
-//   .then(()=>loadingCompleted.value = true)
-//   .catch(err=>console.log(err))
-// })
-
 const slideToLeft = ref(false)
 const slideToRight = ref(false)
-
 // 刪除功能
 const deleteFavorPetHandler=(id)=>{
   const index = favorPet.value.findIndex(pet=>pet.animal_id===id)
@@ -171,10 +145,37 @@ watch([sliceStart, sliceEnd], ()=>{
   console.log('更新五筆資料')
 })
 
-// css style bind
-const getBackground =(url)=>{
-  return `background: #a9e6cc url(${url}) no-repeat center / ${imageMode.value}`
+// 在apiData上面隨機加上defaultBackground項目
+const addDefaultBackground=()=>{
+  const dogBackground = ["dog01.png","dog02.png","dog03.png","dog04.png","dog05.png"]
+  const catBackground = ["cat01.png","cat02.png","cat03.png","cat04.png","cat05.png"]
+  let fileName = ''
+  apiData.value.forEach(i => {
+    if(i.animal_kind==='狗'){
+      dogBackground.sort(()=>Math.random()-0.5)
+      fileName = dogBackground[0]
+      i.defaultBackground = fileName
+    }
+    if(i.animal_kind==='貓'){
+      catBackground.sort(()=>Math.random()-0.5)
+      fileName = catBackground[0]
+      i.defaultBackground = fileName
+    }
+  })
 }
+// css style bind 因為有些圖片來源載入太慢 綁雙層背景在載入時墊底 讓使用者體驗較佳
+const getBackground = (url, defaultBackground)=>{
+  const localUrl = new URL(`./assets/${defaultBackground}`, import.meta.url).href
+  return `background: url(${url}) no-repeat center / ${imageMode.value}, rgb(244, 253, 143) url(${localUrl}) no-repeat center / cover`
+}
+// 監聽鍵盤
+const keyupHandler=(event)=>{
+  if(event.keyCode===38) slideEnd('up') //鬆開上箭頭
+  if(event.keyCode===40) slideEnd('down') //鬆開下箭頭
+  if(event.keyCode===37) slideEnd('left') //鬆開左箭頭
+  if(event.keyCode===39) slideEnd('right') //鬆開右箭頭
+}
+window.addEventListener('keyup',keyupHandler)
 </script>
 
 <template>
@@ -202,7 +203,7 @@ const getBackground =(url)=>{
         <div v-for="item in fiveData" class="card"
           @touchstart="touchstartHandler"
           @touchend="touchendHandler(slideEnd, $event)"
-          :style="getBackground(item.album_file)"
+          :style="getBackground(item.album_file, item.defaultBackground)"
           :key="item.animal_id">
           <i class="fa-solid fa-crop" @click="imageMode=imageMode=='cover'?'contain':'cover'"></i>
         </div>
@@ -223,14 +224,12 @@ const getBackground =(url)=>{
       <p>API似乎掛了‼</p>
       <p>😥請稍後再試😥</p>
     </div>
-    <!-- <div v-else class="loading" ref="loading"> -->
     <div v-else class="loading">
-      <div class="message">loading...</div>
+      <div class="message">配對中...</div>
       <div class="rectangles">
         <div class="rectangle"></div><div class="rectangle"></div><div class="rectangle"></div>
       </div>
     </div>
-
     <favorPetTemp :favor-pet="favorPet" 
                   :favor-pet-wrap-hide="favorPetWrapHide"
                   :image-mode="imageMode" 
@@ -253,7 +252,6 @@ const getBackground =(url)=>{
   justify-content: center;
   align-items: center;
 }
-
 .button{
   display: flex;
   justify-content: center;
@@ -269,7 +267,6 @@ const getBackground =(url)=>{
     top: 50px;
     left: 0;
     right: 0;
-    // padding: 50px;
     @include flex_center;
     flex-direction: column;
     @include mobile{
@@ -290,14 +287,21 @@ const getBackground =(url)=>{
         font-size: 9vw;
       }
       .dog, .cat{
-        color: rgb(187, 187, 187);
+        color: rgba(255, 255, 255, 0.9);
         margin: 0 10px;
         cursor: pointer;
         transition: all .5s;
         white-space: nowrap;
+        transform: scale(0.9);
+        transition: all .3s;
+        &:hover{
+          transform: scale(1);
+        }
         @include flex_center;
         .emoji{
             opacity: 0.5;
+            transform: scale(0.9);
+            transition: all .3s;
         }
         .switch{
           position: relative;
@@ -334,9 +338,7 @@ const getBackground =(url)=>{
         &.active{
           .emoji{
             opacity: 1;
-          }
-          .animal{
-            color: rgba(92, 183, 85, 0.5);
+            transform: scale(1);
           }
           .switch{
             background: rgba(92, 183, 85, 0.5);
@@ -351,21 +353,26 @@ const getBackground =(url)=>{
   div{
     .cards{
       position: absolute;
-      top: 100px;
+      top: 50px;
       bottom: 0;
       left: 0;
       right: 0;
       margin: auto;
       .card{
         position: absolute;
-        top: 0;
+        top: 120px;
         bottom: 0;
         left: 0;
         right: 0;
         margin: auto;
-        width: 400px;
-        height: 400px;
-        border-radius: 5px;
+        width: 50vmin;
+        height: 50vmin;
+        border-radius: 20px;
+        @include mobile{
+          top: 0;
+          width: 90vmin;
+          height: 90vmin;
+        }
         &:nth-child(1){
           transform: perspective(400px) translate3d(0, 0, 0);
           border: rgb(244, 253, 143) 5px solid;
@@ -373,26 +380,25 @@ const getBackground =(url)=>{
           z-index: 5;
         }
         &:nth-child(2){
-          transform: perspective(300px) translate3d(0, -16px, -10px);
+          transform: perspective(300px) translate3d(0, -32px, -10px);
           border: rgb(244, 253, 143) 4px solid;
           opacity: 0.8;
           z-index: 4;
         }
         &:nth-child(3){
-          transform: perspective(200px) translate3d(0, -40px, -20px);
+          transform: perspective(200px) translate3d(0, -65px, -20px);
           border: rgb(244, 253, 143) 3px solid;
           opacity: 0.6;
           z-index: 3;
         }
         &:nth-child(4){
-          transform: perspective(150px) translate3d(0, -70px, -30px);
+          transform: perspective(150px) translate3d(0, -105px, -30px);
           border: rgb(244, 253, 143) 2px solid;
           opacity: 0.4;
           z-index: 2;
         }
         &:nth-child(5){
-          transform: perspective(150px) translate3d(0, -70px, -30px);
-          border: rgb(244, 253, 143) 1px solid;
+          transform: perspective(150px) translate3d(0, -105px, -30px);
           opacity: 0;
           z-index: 1;
         }
@@ -403,8 +409,6 @@ const getBackground =(url)=>{
           font-size: 16px;
           color: rgb(215, 124, 144);
           cursor: pointer;
-          // pointer-events: auto;
-          // z-index: 999;
         }
       }
       // &.slideMoving{
@@ -412,7 +416,6 @@ const getBackground =(url)=>{
       //     // will-change: transform;
       //     // transition: transform .2s;
       //     &:nth-child(1){
-      //       // transform: perspective(400px) ;
       //       // transform: perspective(400px) translate3d(v-bind(moveX)+'px',v-bind(moveY)+'px', 0);
       //       transform: v-bind(moveX);
       //     }
@@ -423,7 +426,7 @@ const getBackground =(url)=>{
           will-change: transform;
           transition: transform .2s;
           &:nth-child(1){
-            transform: perspective(400px) translate3d(-70vw, 0, 0) rotate(-15deg);
+            transform: perspective(400px) translate3d(-70vw, 0, 0) rotate(-10deg);
             opacity: 0.3;
           }
           &:nth-child(2){
@@ -432,15 +435,15 @@ const getBackground =(url)=>{
             opacity: 1;
           }
           &:nth-child(3){
-            transform: perspective(300px) translate3d(0, -16px, -10px);
+            transform: perspective(300px) translate3d(0, -32px, -10px);
             opacity: 0.8;
           }
           &:nth-child(4){
-            transform: perspective(200px) translate3d(0, -40px, -20px);
+            transform: perspective(200px) translate3d(0, -65px, -20px);
             opacity: 0.6;
           }
           &:nth-child(5){
-            transform: perspective(150px) translate3d(0, -70px, -30px);
+            transform: perspective(150px) translate3d(0, -105px, -30px);
             opacity: 0.4;
           }
         }
@@ -448,13 +451,12 @@ const getBackground =(url)=>{
       &.toRight{
         .card{
           &:nth-child(1){
-            transform: perspective(400px) translate3d(70vw, 0, 0) rotate(15deg);
+            transform: perspective(400px) translate3d(70vw, 0, 0) rotate(10deg);
             opacity: 0.3;
           }
         }
       }  
     }
-  
     .buttons{
       position: absolute;
       left: 0;
@@ -463,22 +465,31 @@ const getBackground =(url)=>{
       display: flex;
       justify-content: space-between;
       @include mobile{
-        bottom: 50px
+        bottom: 60px
       }
       .button{
         @include flex_center;
         width: 100px;
         height: 100px;
-        background: radial-gradient(circle, rgba(244,253,143,1) 0%, rgba(244,253,143,0.5) 100%);
+        background: radial-gradient(circle, rgba(244,253,143,1) 0%, rgba(244,253,143,0.6) 100%);
         border-radius: 50%;
+        transform: scale(0.8);
+        transition: all .3s;
         cursor: pointer;
+        &:hover{
+          transform: scale(1);
+          background: radial-gradient(circle, rgba(244,253,143) 0%, rgba(244,253,143) 100%);
+        }
         @include mobile{
           height: 50px;
           border-radius: 30px;
         }
         i {
           color: rgb(215, 124, 144);
-          font-size: 30px;
+          font-size:60px;
+          @include mobile{
+            font-size: 40px;
+          }
         }
       }
     }
