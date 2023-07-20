@@ -19,9 +19,6 @@ const favorPet = ref(JSON.parse(localStorage.getItem('pet_favorPet')) || [])
 const loadingCompleted = ref(true)
 const apiErr= ref(false)
 const heartAni = ref(false)
-// css style bind
-const imageMode = ref('cover')
-
 // const isSliding = ref(false)
 // const isSliding = ref(true)
 // const move = ref('12')
@@ -102,7 +99,6 @@ const deleteFavorPetHandler=(id)=>{
 //   // moveX.value = moveDistanceX
 //   // moveY.value = moveDistanceY
 // }
-
 // 使用者操作(滑動放開或點擊卡片)
 const slideEnd = (direction) =>{
   // isSliding.value = false
@@ -151,6 +147,7 @@ const addDefaultBackground=()=>{
   const catBackground = ["cat01.png","cat02.png","cat03.png","cat04.png","cat05.png"]
   let fileName = ''
   apiData.value.forEach(i => {
+    i.imageCrop = true
     if(i.animal_kind==='狗'){
       dogBackground.sort(()=>Math.random()-0.5)
       fileName = dogBackground[0]
@@ -166,7 +163,7 @@ const addDefaultBackground=()=>{
 // css style bind 因為有些圖片來源載入太慢 綁雙層背景在載入時墊底 讓使用者體驗較佳
 const getBackground = (url, defaultBackground)=>{
   const localUrl = new URL(`./assets/${defaultBackground}`, import.meta.url).href
-  return `background: url(${url}) no-repeat center / ${imageMode.value}, rgb(244, 253, 143) url(${localUrl}) no-repeat center / cover`
+  return `background: url(${url}) no-repeat center / cover, rgb(255, 255, 255) url(${localUrl}) no-repeat center / cover`
 }
 // 監聽鍵盤
 const keyupHandler=(event)=>{
@@ -199,17 +196,18 @@ window.addEventListener('keyup',keyupHandler)
     </div>
     <div v-if="loadingCompleted && !apiErr"> 
       <!-- <div class="cards" :class="{toLeft:slideToLeft, toRight:slideToRight, slideMoving:isSliding}"> -->
-      <div class="cards" :class="{toLeft:slideToLeft, toRight:slideToRight}">
-        <div v-for="item in fiveData" class="card"
+      <div class="cards" :class="{toLeft:slideToLeft, toRight:slideToRight}" @click="favorPetWrapHide=true">
+        <div v-for="pet in fiveData" class="card"
           @touchstart="touchstartHandler"
           @touchend="touchendHandler(slideEnd, $event)"
-          :style="getBackground(item.album_file, item.defaultBackground)"
-          :key="item.animal_id">
-          <i class="fa-solid fa-crop" @click="imageMode=imageMode=='cover'?'contain':'cover'"></i>
+          :class="{ contain:!pet.imageCrop }"
+          :style="getBackground(pet.album_file, pet.defaultBackground)"
+          :key="pet.animal_id">
+          <div class="imageCrop"><i class="fa-solid fa-crop" @click="pet.imageCrop=!pet.imageCrop"></i></div>
         </div>
       </div>
       <!-- @touchmove="touchmoveHandler(slideMoving, $event)" -->
-      <!-- :style="getBackground(item.album_file)" -->
+      <!-- :style="getBackground(pet.album_file)" -->
       <div class="buttons">
         <div @click="slideEnd('left')" class="toLeft button"><i class="fa-regular fa-face-sad-tear"></i></div>
         <div @click="slideEnd('right')" class="toRight button"><i class="fa-solid fa-heart fa-beat-fade"></i></div>
@@ -221,7 +219,7 @@ window.addEventListener('keyup',keyupHandler)
     </div>
 
     <div v-else-if="apiErr" class="apiErr">
-      <p>API似乎掛了‼</p>
+      <p>API發生問題</p>
       <p>😥請稍後再試😥</p>
     </div>
 
@@ -234,10 +232,8 @@ window.addEventListener('keyup',keyupHandler)
         </div>
         <div class="message">配對中...</div>
     </div>
-
     <favorPetTemp :favor-pet="favorPet" 
                   :favor-pet-wrap-hide="favorPetWrapHide"
-                  :image-mode="imageMode" 
                   @change-favor-pet-status="favorPetWrapHide=!favorPetWrapHide"
                   @change-favor-pet-up="favorPetWrapHide=false"
                   @change-favor-pet-down="favorPetWrapHide=true"
@@ -247,6 +243,8 @@ window.addEventListener('keyup',keyupHandler)
 </template>
 
 <style lang='scss' scoped>
+
+$color_light: white;
 @mixin mobile{
   @media(max-width: 768px){
     @content;
@@ -267,6 +265,16 @@ window.addEventListener('keyup',keyupHandler)
   background: linear-gradient(180deg, rgba(184,241,247,1) 0%, rgba(201,254,182,1) 100%);
   @include flex_center;
   position: relative;
+  &::before{
+    content: '';
+    position: absolute;
+    top: 0;
+    transform: translateY(-50%);
+    width: 100vmin;
+    height: 100vmin;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+  }
   .option{
     position: absolute;
     top: 50px;
@@ -279,6 +287,7 @@ window.addEventListener('keyup',keyupHandler)
     }
     h2{
       color: rgba(255, 255, 255, 0.9);
+      user-select: none;
       font-size: 5vw;
       @include mobile{
         font-size: 9vw;
@@ -294,6 +303,7 @@ window.addEventListener('keyup',keyupHandler)
       .dog, .cat{
         color: rgba(255, 255, 255, 0.9);
         margin: 0 10px;
+        user-select: none;
         cursor: pointer;
         transition: all .5s;
         white-space: nowrap;
@@ -373,6 +383,7 @@ window.addEventListener('keyup',keyupHandler)
         width: 50vmin;
         height: 50vmin;
         border-radius: 20px;
+        border: $color_light 5px solid;
         @include mobile{
           top: 0;
           width: 90vmin;
@@ -380,25 +391,21 @@ window.addEventListener('keyup',keyupHandler)
         }
         &:nth-child(1){
           transform: perspective(400px) translate3d(0, 0, 0);
-          border: rgb(244, 253, 143) 5px solid;
           opacity: 1;
           z-index: 5;
         }
         &:nth-child(2){
-          transform: perspective(300px) translate3d(0, -32px, -10px);
-          border: rgb(244, 253, 143) 4px solid;
+          transform: perspective(300px) translate3d(0, -32px, -12px);
           opacity: 0.8;
           z-index: 4;
         }
         &:nth-child(3){
           transform: perspective(200px) translate3d(0, -65px, -20px);
-          border: rgb(244, 253, 143) 3px solid;
           opacity: 0.6;
           z-index: 3;
         }
         &:nth-child(4){
           transform: perspective(150px) translate3d(0, -105px, -30px);
-          border: rgb(244, 253, 143) 2px solid;
           opacity: 0.4;
           z-index: 2;
         }
@@ -407,13 +414,35 @@ window.addEventListener('keyup',keyupHandler)
           opacity: 0;
           z-index: 1;
         }
-        i.fa-crop{
+        .imageCrop{
           position: absolute;
           right: 10px;
           bottom: 10px;
-          font-size: 16px;
-          color: rgb(215, 124, 144);
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: $color_light;
+          @include flex_center;
           cursor: pointer;
+          i.fa-crop{
+            font-size: 16px;
+            color: rgb(215, 124, 144);
+          }
+          &:hover{
+            i.fa-crop{
+              color: rgb(214, 89, 116);
+            }
+          }
+        }
+        &.contain{
+          background-size: contain !important;
+          .imageCrop{
+            background: rgb(222, 222, 222);
+            i.fa-crop{
+              color: gray;
+              cursor: pointer;
+            }
+          }
         }
       }
       // &.slideMoving{
@@ -429,18 +458,17 @@ window.addEventListener('keyup',keyupHandler)
       &.toLeft, &.toRight{
         .card{
           will-change: transform;
-          transition: transform .2s;
+          transition: transform .2s linear;
           &:nth-child(1){
-            transform: perspective(400px) translate3d(-70vw, 0, 0) rotate(-10deg);
+            transform: perspective(400px) translate3d(-70%, 0, 0) rotate(-10deg);
             opacity: 0.3;
           }
           &:nth-child(2){
-            border: rgb(244, 253, 143) 5px solid;
             transform: perspective(400px) translate3d(0, 0, 0);
             opacity: 1;
           }
           &:nth-child(3){
-            transform: perspective(300px) translate3d(0, -32px, -10px);
+            transform: perspective(300px) translate3d(0, -32px, -12px);
             opacity: 0.8;
           }
           &:nth-child(4){
@@ -456,8 +484,7 @@ window.addEventListener('keyup',keyupHandler)
       &.toRight{
         .card{
           &:nth-child(1){
-            transform: perspective(400px) translate3d(70vw, 0, 0) rotate(10deg);
-            opacity: 0.3;
+            transform: perspective(400px) translate3d(70%, 0, 0) rotate(10deg);
           }
         }
       }  
@@ -478,9 +505,28 @@ window.addEventListener('keyup',keyupHandler)
         height: 100px;
         background: radial-gradient(circle, rgba(244,253,143,1) 0%, rgba(244,253,143,0.6) 100%);
         border-radius: 50%;
+        border: 10px rgb(215, 124, 144, 0.8) solid;
         transform: scale(0.8);
         transition: all .3s;
+        position: relative;
         cursor: pointer;
+        @include mobile{
+          border: 5px rgb(215, 124, 144, 0.8) solid;
+        }
+        &::after{
+          content: '';
+          position: absolute;
+          width: 110%;
+          height: 110%;
+          border-radius: 50%;
+          border: 10px rgba(212, 167, 176, 0.8) solid;
+          @include mobile{
+            width: 105%;
+            height: 105%;
+            border-radius: 30px;
+            border: 5px rgba(212, 167, 176, 0.8) solid;
+          }
+        }
         &:hover{
           transform: scale(1);
           background: radial-gradient(circle, rgba(244,253,143) 0%, rgba(244,253,143) 100%);
@@ -571,6 +617,7 @@ window.addEventListener('keyup',keyupHandler)
     font-size: 30px;
     font-weight: 800;
     color: rgb(215, 124, 144);
+    user-select: none;
   }
   @keyframes loadingAnimation{
     0% { transform: rotate(0deg); }

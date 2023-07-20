@@ -5,7 +5,6 @@ import { touchstartHandler, touchendHandler } from '../JS/touch'
 const props = defineProps({
   favorPet: Array,
   favorPetWrapHide: Boolean,
-  imageMode: String,
 })
 const Emits = defineEmits(['change-favor-pet-status','change-favor-pet-up','change-favor-pet-down','delete-favorPet'])
 const slide = (direction)=>{
@@ -23,7 +22,7 @@ watchEffect(()=>{
     if(pet.animal_Variety.trim()==='混種貓') pet.animal_Variety='米克斯貓咪';
     pet.animal_sex=pet.animal_sex.trim()==='M'?'小男生':'小女生'
     pet.animal_sterilization = pet.animal_sterilization.trim()==='T'?'已經絕育了':'還沒絕育'
-    // 把 "2023-07-16" 字串切割 不想更改原資料 所以創新變數
+    // 把 "2023-07-16" 字串切割 原資料留著做判斷用故不覆蓋
     const [year,month,date] = pet.animal_opendate.split('-')
     const animal_opendateTrans = `${year}年${month}月${date}日`
     return {
@@ -36,14 +35,19 @@ watchEffect(()=>{
 // console.log('子組件拿到props.favorPetWrapHide',props.favorPetWrapHide)
 // console.log('子組件拿到props.favorPet',props.favorPet)
 // console.log('子組件拿到favorPetData.value',favorPetData.value)
-const getBackground = (url, defaultBackground)=>{
+const getBackground = (url, defaultBackground, imageCrop)=>{
+  let imageSize = '' 
+  if(imageCrop)imageSize='cover'
+  else imageSize='contain'
   const localUrl = new URL(`../assets/${defaultBackground}`, import.meta.url).href
-  return `background: url(${url}) no-repeat center / ${props.imageMode}, rgb(244, 253, 143) url(${localUrl}) no-repeat center / cover`
+  return `background: url(${url}) no-repeat center / ${imageSize}, rgb(255, 255, 255) url(${localUrl}) no-repeat center / cover`
 }
-
 const flip=(pet)=>{
   favorPetData.value.forEach(i=>i.status=false);
   pet.status=!pet.status
+}
+const getHref = (address) =>{
+  return `http://maps.google.com.tw/maps?q=${address}`
 }
 </script>
 
@@ -54,16 +58,17 @@ const flip=(pet)=>{
     </div>
     <TransitionGroup name="delete" tag="div" class="cards">
       <div v-for="pet in favorPetData" class="card-container" @click="flip(pet)" :class="{flip:pet.status}" :key="pet.animal_id">
-        <div class="card-front" :style="getBackground(pet.album_file, pet.defaultBackground)" @touchstart.self="touchstartHandler" @touchend.self="touchendHandler(slide, $event)"></div>
+        <div class="card-front" :style="getBackground(pet.album_file, pet.defaultBackground, pet.imageCrop)" @touchstart.self="touchstartHandler" @touchend.self="touchendHandler(slide, $event)"></div>
         <div class="card-back">
           <div class="info">
             <div class="options">
               <div class="back" @click.stop="pet.status=false"><i class="fa-solid fa-arrow-rotate-left"></i></div>
+              <div class="map"><a :href="getHref(pet.shelter_name)" target='blank'><i class="fa-solid fa-map-location-dot"></i></a></div>
               <div class="delete" @click.stop="$emit('delete-favorPet',pet.animal_id)"><i class="fa-regular fa-trash-can"></i></div>
             </div>
             <p class="main">
-              <span>Hi，我是</span><span class="highLight">{{ pet.animal_Variety }}</span>
-              <span>，編號是</span><span class="highLight">{{ pet.animal_id }}</span>
+              <span>Hi，我是編號</span><span class="highLight">{{ pet.animal_id }}</span>
+              <span>的</span><span class="highLight">{{ pet.animal_Variety }}</span>
               <span>，我是</span><span class="highLight">{{ pet.animal_sex }}</span>
               <span>，我現在住在</span><span class="highLight">{{ pet.shelter_name }}</span>
               <span>，地址是</span><span class="highLight">{{ pet.shelter_address }}</span>
@@ -72,15 +77,16 @@ const flip=(pet)=>{
               <span v-if="pet.animal_opendate.length"><span>，從</span><span class="highLight">{{ pet.animal_opendateTrans }}</span><span>開始找新家喔!</span></span>
               <span v-else>希望有一個新家!</span>
             </p>
-            <p v-if="pet.animal_remark"><span>偷偷跟你說，我看到收容所的叔叔阿姨備註：</span><span class="highLight">{{ pet.animal_remark }}</span></p>
+            <p v-if="pet.animal_remark"><span>偷偷跟你說，我看到收容所的叔叔阿姨有備註：</span><span class="highLight">{{ pet.animal_remark }}</span></p>
           </div>
         </div>
       </div>
     </TransitionGroup>
   </div>
 </template>
-
 <style scoped lang="scss">
+
+$color_light: rgb(255, 255, 255);
 @mixin mobile{
   @media(max-width: 1024px){
     @content;
@@ -122,6 +128,7 @@ const flip=(pet)=>{
       font-size: 30px;
       color: rgb(215, 124, 144);
       position: relative;
+      user-select: none;
     }
   }
   .cards{
@@ -129,7 +136,7 @@ const flip=(pet)=>{
     height: 100%;
     padding: 50px 50px 50px 50px;
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-evenly;
     flex-wrap: wrap;
     overflow: auto; // 取消body設定hihe
     perspective: 1200px;
@@ -141,11 +148,10 @@ const flip=(pet)=>{
       scroll-snap-type: x mandatory
     }
     .card-container{
-      flex: 1 0 300px;
+      flex: 0 0 300px;
       margin: 10px;
       position: relative;
-      height: 300px;
-      cursor: pointer;
+      height: 340px;
       pointer-events: auto; //不繼承父層設定
       @include mobile{
         scroll-snap-align: center;
@@ -153,15 +159,22 @@ const flip=(pet)=>{
       .card-front, .card-back{
         width: 100%;
         height: 100%;
-        border-radius: 20px;
         position: absolute;
         backface-visibility: hidden;
+        box-shadow: 5px 5px 10px -2px black;
       }
       .card-front{
-        background: #ccc url(../assets/dog-2.jpg) no-repeat center / cover;
+        background: #ccc url(../assets/dog03.png) no-repeat center / cover;
         animation: rotate-reverse 0.25s ease-in-out forwards;
+        box-sizing: border-box;
+        cursor: pointer;
+        border-top: 20px white solid;
+        border-bottom: 60px white solid;
+        border-left: 20px white solid;
+        border-right: 20px white solid;
       }
       .card-back{
+        border-radius: 20px;
         background: url(../assets/backgroundImage.png);
         animation: rotate2 0.25s ease-in-out forwards;
         box-sizing: border-box;
@@ -171,7 +184,6 @@ const flip=(pet)=>{
           width: 0px;
           color: transparent;
         }
-
         @include mobile{
           overflow-y: auto; //手機版設hidden會讓水平卷軸整個卡住
         }
@@ -190,19 +202,29 @@ const flip=(pet)=>{
             justify-content: space-between;
             box-sizing: border-box;
             padding: 15px;
-          }
-          .back{
-            transition: all .3s;
-            color: rgb(215, 124, 144);
-            &:hover{
-              color: rgb(215, 147, 162);
+            .back{
+              transition: all .3s;
+              color: rgb(215, 124, 144);
+              cursor: pointer;
+              &:hover{
+                color: rgb(215, 147, 162);
+              }
             }
-          }
-          .delete{
-            transition: all .3s;
-            color: grey;
-            &:hover{
-              color: red;
+            .map{
+              a{
+                color: rgb(215, 124, 144);
+                &:visited{
+                  color: rgb(215, 124, 144);
+                }
+              }
+            }
+            .delete{
+              transition: all .3s;
+              color: grey;
+              cursor: pointer;
+              &:hover{
+                color: red;
+              }
             }
           }
           p{
@@ -229,7 +251,6 @@ const flip=(pet)=>{
       }
     }
   }
-  
   &.hide{
     transform: translateY(100%);
     &:hover{
