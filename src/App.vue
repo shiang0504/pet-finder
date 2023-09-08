@@ -5,13 +5,26 @@ import { touchstartHandler, touchendHandler, touchmoveHandler } from './JS/touch
 import { shuffle } from './JS/shuffle'
 import favorPetTemp from './components/favorPet.vue' 
 
+const vLazyloading = {
+  mounted: (el, binding) => {
+    const watcher = new IntersectionObserver(onEnterView);
+    watcher.observe(el);
+    function onEnterView(el, observer) {
+      if (el[0].isIntersecting) {
+        el[0].target.setAttribute('src', el[0].target.dataset.src);
+        observer.unobserve(el[0].target);
+      }
+    }
+  }
+}
 // const itemRefs = ref([])
-// onMounted(()=>{
-//   console.log('ddd',itemRefs.value)
+onMounted(()=>{
+  // console.log('onMounted')
+  // console.log('ddd',itemRefs.value)
 //   console.log('move',move.value)
 //   // itemRefs.value[0].style.transform=move.value
 //   // itemRefs.value[0].style.background='red'
-// })
+})
 
 // 最愛資料
 const favorPet = ref(JSON.parse(localStorage.getItem('pet_favorPet')) || [])
@@ -70,12 +83,12 @@ const callApi=()=>{
   .then(res=>apiData.value.push(...res.data))
   .then(()=>apiData.value = apiData.value.filter(i=>i.album_file.includes('.png')))  //.jpg的相片因憑證問題手機端無法載入
   // .then(()=>apiData.value = apiData.value.filter(i=>i.album_file !== ""))  //刪除沒照片的
-  .then(()=>console.log('刪除空白後，拿到'+apiData.value.length+'筆'))
+  // .then(()=>console.log('刪除空白後，拿到'+apiData.value.length+'筆'))
   .then(()=>shuffle(apiData.value))
-  .then(()=>console.log('亂數完成'))
+  // .then(()=>console.log('亂數完成'))
   .then(()=>addDefaultBackground())
   .then(()=>fiveData.value = apiData.value.slice(sliceStart.value, sliceEnd.value))
-  .then(()=>console.log('首次取得五筆'))
+  // .then(()=>console.log('首次取得五筆'))
   .then(()=>loadingCompleted.value = true)
   .catch(()=>apiErr.value = true)
 }
@@ -115,10 +128,10 @@ const slideEnd = (direction) =>{
     heartAni.value = true
     favorPet.value.unshift(fiveData.value[0])
     localStorage.setItem('pet_favorPet',JSON.stringify(favorPet.value))
-    console.log('進場動畫')
+    // console.log('進場動畫')
     const timeid = setTimeout(()=>{
       slideToRight.value = false
-      console.log('離場動畫')
+      // console.log('離場動畫')
       sliceStart.value += 1
       sliceEnd.value += 1
       clearTimeout(timeid)
@@ -138,7 +151,7 @@ watch([sliceStart, sliceEnd], ()=>{
     return
   }
   fiveData.value = apiData.value.slice(sliceStart.value, sliceEnd.value)
-  console.log('更新五筆資料')
+  // console.log('更新五筆資料')
 })
 
 // 在apiData上面隨機加上defaultBackground項目

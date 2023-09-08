@@ -1,6 +1,22 @@
 <script setup>
 import { ref, computed, watch, watchEffect} from 'vue'
 import { touchstartHandler, touchendHandler } from '../JS/touch'
+import imgEffect from '../components/img_effect.vue'
+
+
+
+const vLazyloading = {
+  mounted: (el, binding) => {
+    const watcher = new IntersectionObserver(onEnterView);
+    watcher.observe(el);
+    function onEnterView(el, observer) {
+      if (el[0].isIntersecting) {
+        el[0].target.setAttribute('src', el[0].target.dataset.src);
+        observer.unobserve(el[0].target);
+      }
+    }
+  }
+}
 
 const props = defineProps({
   favorPet: Array,
@@ -35,13 +51,18 @@ watchEffect(()=>{
 // console.log('子組件拿到props.favorPetWrapHide',props.favorPetWrapHide)
 // console.log('子組件拿到props.favorPet',props.favorPet)
 // console.log('子組件拿到favorPetData.value',favorPetData.value)
+// const getBackground = (url, defaultBackground, imageCrop)=>{
+//   let imageSize = '' 
+//   if(imageCrop)imageSize='cover'
+//   else imageSize='contain'
+//   const localUrl = new URL(`../assets/${defaultBackground}`, import.meta.url).href
+//   return `background: url(${url}) no-repeat center / ${imageSize}, rgb(255, 255, 255) url(${localUrl}) no-repeat center / cover`
+// }
 const getBackground = (url, defaultBackground, imageCrop)=>{
-  let imageSize = '' 
-  if(imageCrop)imageSize='cover'
-  else imageSize='contain'
   const localUrl = new URL(`../assets/${defaultBackground}`, import.meta.url).href
-  return `background: url(${url}) no-repeat center / ${imageSize}, rgb(255, 255, 255) url(${localUrl}) no-repeat center / cover`
+  return `background: rgb(255, 255, 255) url(${localUrl}) no-repeat center / cover`
 }
+
 const flip=(pet)=>{
   favorPetData.value.forEach(i=>i.status=false);
   pet.status=!pet.status
@@ -58,7 +79,12 @@ const getHref = (address) =>{
     </div>
     <TransitionGroup name="delete" tag="div" class="cards">
       <div v-for="pet in favorPetData" class="card-container" @click="flip(pet)" :class="{flip:pet.status}" :key="pet.animal_id">
-        <div class="card-front" :style="getBackground(pet.album_file, pet.defaultBackground, pet.imageCrop)" @touchstart.self="touchstartHandler" @touchend.self="touchendHandler(slide, $event)"></div>
+        <!-- <div class="card-front" :style="getBackground(pet.album_file, pet.defaultBackground, pet.imageCrop)" @touchstart.self="touchstartHandler" @touchend.self="touchendHandler(slide, $event)"></div> -->
+        <div class="card-front" :style="getBackground(pet.album_file, pet.defaultBackground, pet.imageCrop)" @touchstart.self="touchstartHandler" @touchend.self="touchendHandler(slide, $event)">
+          <imgEffect>
+          <img :data-src="pet.album_file" src="" v-lazyloading>
+          </imgEffect>
+        </div>
         <div class="card-back">
           <div class="info">
             <div class="options">
@@ -172,6 +198,13 @@ $color_light: rgb(255, 255, 255);
         border-bottom: 60px white solid;
         border-left: 20px white solid;
         border-right: 20px white solid;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        img{
+          width: 100%;
+        }
       }
       .card-back{
         border-radius: 20px;
